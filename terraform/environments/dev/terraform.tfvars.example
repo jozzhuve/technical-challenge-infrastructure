@@ -1,0 +1,5 @@
+project_id        = "mi-proyecto-gcp"
+region            = "us-central1"
+endorsement_image = "us-central1-docker.pkg.dev/mi-proyecto-gcp/technical-challenge/endorsement:latest"
+routing_image     = "us-central1-docker.pkg.dev/mi-proyecto-gcp/technical-challenge/routing:latest"
+web_image         = "us-central1-docker.pkg.dev/mi-proyecto-gcp/technical-challenge/web:latest"

@@ -1,0 +1,134 @@
+{
+  "info": {
+    "_postman_id": "7e3f2c86-426b-4f89-92d2-technical-challenge",
+    "name": "Technical Challenge - Evolution",
+    "description": "Colección para validar los servicios de traducción de endosos y rutas óptimas.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "endorsementBaseUrl", "value": "http://localhost:8080" },
+    { "key": "routingBaseUrl", "value": "http://localhost:8081" }
+  ],
+  "item": [
+    {
+      "name": "Endosos",
+      "item": [
+        {
+          "name": "Health - Endorsement",
+          "request": {
+            "method": "GET",
+            "url": "{{endorsementBaseUrl}}/health"
+          }
+        },
+        {
+          "name": "Traducir endoso - Rumbo",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyNumber\": \"08200000049\",\n  \"idEnvio\": 5984,\n  \"frecuencia\": \"Semestral\",\n  \"tipoEndoso\": \"CambioFrecuencia\",\n  \"producto\": \"Rumbo\",\n  \"plan\": \"PlanRumbo\",\n  \"moneda\": \"Nuevo Sol\",\n  \"usuario\": \"interface.servicios\",\n  \"fechaSolicitud\": \"2025-08-27\",\n  \"fechaCliente\": \"2025-08-27\",\n  \"fechaEfectiva\": \"2025-09-01\"\n}"
+            },
+            "url": "{{endorsementBaseUrl}}/api/v1/endorsements/translate"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respeta la plantilla', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.eventEntity.description).to.eql('SolicitarEndoso');",
+                  "  pm.expect(body.eventAppliedEntities[0].orderEvent).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Plantilla inexistente",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"policyNumber\": \"08200000049\",\n  \"idEnvio\": 5984,\n  \"frecuencia\": \"Semestral\",\n  \"tipoEndoso\": \"NoConfigurado\",\n  \"producto\": \"Rumbo\",\n  \"plan\": \"PlanRumbo\",\n  \"moneda\": \"Nuevo Sol\",\n  \"usuario\": \"interface.servicios\",\n  \"fechaSolicitud\": \"2025-08-27\",\n  \"fechaCliente\": \"2025-08-27\",\n  \"fechaEfectiva\": \"2025-09-01\"\n}"
+            },
+            "url": "{{endorsementBaseUrl}}/api/v1/endorsements/translate"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('HTTP 404', function () { pm.response.to.have.status(404); });"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Rutas",
+      "item": [
+        {
+          "name": "Health - Routing",
+          "request": {
+            "method": "GET",
+            "url": "{{routingBaseUrl}}/health"
+          }
+        },
+        {
+          "name": "Calcular ruta óptima",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accidentLocation\": \"San Isidro\",\n  \"depots\": [\"Miraflores\", \"Ate\"],\n  \"graph\": {\n    \"Miraflores\": { \"San Isidro\": 7, \"Barranco\": 3 },\n    \"San Isidro\": { \"Miraflores\": 7, \"Lince\": 4 },\n    \"Barranco\": { \"Miraflores\": 3, \"Surco\": 5 },\n    \"Lince\": { \"San Isidro\": 4, \"Surco\": 6 },\n    \"Surco\": { \"Barranco\": 5, \"Lince\": 6, \"Ate\": 10 },\n    \"Ate\": { \"Surco\": 10 }\n  }\n}"
+            },
+            "url": "{{routingBaseUrl}}/api/v1/routes/optimal"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Selecciona Miraflores', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.fromDepot).to.eql('Miraflores');",
+                  "  pm.expect(body.distance).to.eql(7);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ruta no alcanzable",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accidentLocation\": \"San Isidro\",\n  \"depots\": [\"Ate\"],\n  \"graph\": {\n    \"Ate\": {},\n    \"San Isidro\": {}\n  }\n}"
+            },
+            "url": "{{routingBaseUrl}}/api/v1/routes/optimal"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('HTTP 422', function () { pm.response.to.have.status(422); });"]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

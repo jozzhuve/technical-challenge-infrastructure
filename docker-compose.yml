@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: endorsement
+      POSTGRES_USER: endorsement
+      POSTGRES_PASSWORD: endorsement
+    ports:
+      - "5432:5432"
+    volumes:
+      - endorsement_postgres_data:/var/lib/postgresql/data
+      - ../technical-challenge-endorsement/docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U endorsement -d endorsement"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  endorsement:
+    build:
+      context: ../technical-challenge-endorsement
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+      HOST: 0.0.0.0
+      LOG_LEVEL: info
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: endorsement
+      DATABASE_USER: endorsement
+      DATABASE_PASSWORD: endorsement
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  routing:
+    build:
+      context: ../technical-challenge-routing
+    environment:
+      PORT: 8081
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8081/health >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build:
+      context: ../technical-challenge-web
+    ports:
+      - "3000:80"
+    depends_on:
+      endorsement:
+        condition: service_healthy
+      routing:
+        condition: service_healthy
+
+volumes:
+  endorsement_postgres_data:
