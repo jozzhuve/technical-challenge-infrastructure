@@ -78,7 +78,7 @@ resource "google_secret_manager_secret_version" "database_password" {
 
 module "endorsement" {
   source     = "../../modules/cloud-run"
-  depends_on = [google_project_service.required]
+  depends_on = [google_project_service.required, google_secret_manager_secret_version.database_password]
 
   project_id                = var.project_id
   region                    = var.region
@@ -87,16 +87,23 @@ module "endorsement" {
   port                      = 8080
   allow_unauthenticated     = true
   cloud_sql_connection_name = google_sql_database_instance.endorsement.connection_name
+
   environment = {
-    NODE_ENV          = "production"
-    PORT              = "8080"
-    HOST              = "0.0.0.0"
-    LOG_LEVEL         = "info"
-    DATABASE_HOST     = "/cloudsql/${google_sql_database_instance.endorsement.connection_name}"
-    DATABASE_PORT     = "5432"
-    DATABASE_NAME     = google_sql_database.endorsement.name
-    DATABASE_USER     = google_sql_user.endorsement.name
-    DATABASE_PASSWORD = random_password.database.result
+    NODE_ENV      = "production"
+    PORT          = "8080"
+    HOST          = "0.0.0.0"
+    LOG_LEVEL     = "info"
+    DATABASE_HOST = "/cloudsql/${google_sql_database_instance.endorsement.connection_name}"
+    DATABASE_PORT = "5432"
+    DATABASE_NAME = google_sql_database.endorsement.name
+    DATABASE_USER = google_sql_user.endorsement.name
+  }
+
+  secret_environment = {
+    DATABASE_PASSWORD = {
+      secret  = google_secret_manager_secret.database_password.secret_id
+      version = "latest"
+    }
   }
 }
 
@@ -116,6 +123,7 @@ module "routing" {
   image                 = var.routing_image
   port                  = 8081
   allow_unauthenticated = true
+
   environment = {
     PORT = "8081"
   }

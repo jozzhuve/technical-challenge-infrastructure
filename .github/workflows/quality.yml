@@ -1,0 +1,51 @@
+name: Validaciones
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+
+jobs:
+  infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Revisar formato Terraform
+        run: terraform fmt -check -recursive terraform
+
+      - name: Inicializar Terraform
+        run: terraform -chdir=terraform/environments/dev init -backend=false
+
+      - name: Validar Terraform
+        run: terraform -chdir=terraform/environments/dev validate
+
+      - name: Validar Docker Compose
+        run: docker compose config
+
+  docs:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs-site
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Construir documentación
+        run: npm run build

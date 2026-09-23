@@ -43,17 +43,11 @@ docker compose -f technical-challenge-infrastructure/docker-compose.yml down
 
 ## Postman
 
-Importar:
-
-```text
-postman/technical-challenge.postman_collection.json
-```
-
-La colección incluye health checks, casos exitosos y escenarios de error controlado para ambos servicios.
+Importar `postman/technical-challenge.postman_collection.json`. La colección incluye health checks, casos exitosos y escenarios de error controlado para ambos servicios.
 
 ## Terraform
 
-La infraestructura objetivo utiliza GCP con Cloud Run, Cloud SQL, Artifact Registry y Secret Manager.
+La infraestructura objetivo utiliza GCP con Cloud Run, Cloud SQL, Artifact Registry y Secret Manager. La contraseña de PostgreSQL se genera en Terraform, se almacena en Secret Manager y se inyecta en Cloud Run mediante referencia al secreto.
 
 ```bash
 cd terraform/environments/dev
@@ -64,8 +58,14 @@ terraform validate
 terraform plan
 ```
 
-No se debe ejecutar `terraform apply` hasta revisar el plan y definir la configuración final de seguridad/API Gateway.
+No se ejecuta `terraform apply` hasta revisar el plan y cerrar API Gateway/JWT.
 
-## Documentación
+## Docusaurus
 
-Los documentos de arquitectura se encuentran en `docs/architecture`. La documentación navegable con Docusaurus se incorporará después de cerrar la validación funcional y el plan de infraestructura.
+```bash
+cd docs-site
+npm install
+npm run start
+```
+
+La documentación contiene la visión general, arquitectura y propuesta TO-BE del ejercicio de préstamos.

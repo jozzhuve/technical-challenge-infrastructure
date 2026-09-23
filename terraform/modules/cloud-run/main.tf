@@ -4,7 +4,17 @@ resource "google_service_account" "runtime" {
   display_name = "Runtime ${var.name}"
 }
 
+resource "google_secret_manager_secret_iam_member" "runtime" {
+  for_each  = var.secret_environment
+  project   = var.project_id
+  secret_id = each.value.secret
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.runtime.email}"
+}
+
 resource "google_cloud_run_v2_service" "this" {
+  depends_on = [google_secret_manager_secret_iam_member.runtime]
+
   project  = var.project_id
   name     = var.name
   location = var.region
@@ -25,6 +35,19 @@ resource "google_cloud_run_v2_service" "this" {
         content {
           name  = env.key
           value = env.value
+        }
+      }
+
+      dynamic "env" {
+        for_each = var.secret_environment
+        content {
+          name = env.key
+          value_source {
+            secret_key_ref {
+              secret  = env.value.secret
+              version = env.value.version
+            }
+          }
         }
       }
 
