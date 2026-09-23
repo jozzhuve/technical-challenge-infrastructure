@@ -22,6 +22,6 @@ Docker Compose levanta PostgreSQL, ambos backends y el frontend. El frontend act
 
 ## Objetivo GCP
 
-La primera versión de infraestructura contempla Artifact Registry, Cloud Run, Cloud SQL y Secret Manager. API Gateway y el esquema de autenticación JWT se incorporarán antes del despliegue final para que los backends no queden expuestos directamente.
+La primera versión de infraestructura contempla Artifact Registry, Cloud Run, Cloud SQL y Secret Manager. Los backends quedan privados por defecto. API Gateway y la validación JWT se incorporarán antes del `terraform apply` para exponer únicamente contratos controlados hacia los consumidores.
 
 La prioridad actual es validar la solución funcional y obtener un `terraform plan` reproducible antes de aplicar cambios sobre la cuenta GCP.

@@ -3,7 +3,6 @@ import type { Config } from '@docusaurus/types';
 const config: Config = {
   title: 'Technical Challenge',
   tagline: 'Decisiones de arquitectura, ejecución y calidad',
-  favicon: 'img/favicon.ico',
   url: 'https://example.com',
   baseUrl: '/',
   onBrokenLinks: 'throw',

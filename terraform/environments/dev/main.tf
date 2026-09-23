@@ -85,7 +85,7 @@ module "endorsement" {
   name                      = "endorsement-service"
   image                     = var.endorsement_image
   port                      = 8080
-  allow_unauthenticated     = true
+  allow_unauthenticated     = false
   cloud_sql_connection_name = google_sql_database_instance.endorsement.connection_name
 
   environment = {
@@ -122,7 +122,7 @@ module "routing" {
   name                  = "routing-service"
   image                 = var.routing_image
   port                  = 8081
-  allow_unauthenticated = true
+  allow_unauthenticated = false
 
   environment = {
     PORT = "8081"
