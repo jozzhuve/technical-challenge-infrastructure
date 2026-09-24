@@ -30,7 +30,7 @@ base64url() {
 NOW="$(date +%s)"
 EXP="$((NOW + TTL_SECONDS))"
 HEADER="$(printf '%s' '{"alg":"HS256","typ":"JWT"}' | base64url)"
-PAYLOAD="$(printf '{"key":"%s","iat":%s,"exp":%s}' "${JWT_KEY}" "${NOW}" "${EXP}" | base64url)"
+PAYLOAD="$(printf '{"key":"%s","iat":%s,"nbf":%s,"exp":%s}' "${JWT_KEY}" "${NOW}" "${NOW}" "${EXP}" | base64url)"
 UNSIGNED_TOKEN="${HEADER}.${PAYLOAD}"
 SIGNATURE="$(printf '%s' "${UNSIGNED_TOKEN}" | openssl dgst -sha256 -hmac "${APISIX_JWT_SECRET}" -binary | base64url)"
 
