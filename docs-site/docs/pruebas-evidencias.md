@@ -8,7 +8,7 @@ La entrega puede verificarse sin depender de una explicación verbal. Dejé prue
 
 ## Validación funcional previa
 
-Antes de incorporar el gateway se ejecutó la colección sobre ambos servicios con resultado exitoso:
+Antes de incorporar el gateway se ejecutó la colección directamente sobre ambos servicios con resultado exitoso:
 
 ```text
 iterations      1 ejecutada / 0 fallidas
@@ -21,7 +21,7 @@ max             74 ms
 
 Estos tiempos corresponden únicamente a la ejecución local del reto y no se consideran benchmark.
 
-## Validación actual con APISIX y JWT
+## Validación final con APISIX y JWT
 
 La colección actual apunta al gateway:
 
@@ -29,7 +29,7 @@ La colección actual apunta al gateway:
 http://localhost:9080
 ```
 
-Para generar un JWT temporal y ejecutar Newman:
+La ejecución final se realizó generando un JWT temporal y ejecutando Newman:
 
 ```bash
 TOKEN=$(./scripts/generate-jwt.sh)
@@ -38,30 +38,47 @@ npx --yes newman run postman/technical-challenge.postman_collection.json \
   --env-var jwtToken="$TOKEN"
 ```
 
-La colección valida:
-
-- health de Endorsement a través de APISIX;
-- health de Routing a través de APISIX;
-- operación protegida sin JWT y respuesta `401`;
-- traducción de endosos con JWT válido;
-- plantilla inexistente y respuesta `404`;
-- ruta óptima con JWT válido;
-- ruta no alcanzable y respuesta `422`.
-
-No registro aquí un resultado numérico de esta segunda ejecución hasta conservar la evidencia final obtenida desde Newman.
-
-## Seguridad demostrable
-
-La configuración local permite comprobar estos comportamientos:
+Resultado observado:
 
 ```text
-sin JWT               -> 401
-JWT válido             -> operación funcional
-rate limit excedido    -> 429
-backend directo host   -> no expuesto
+iterations      1 ejecutada / 0 fallidas
+requests        7 ejecutadas / 0 fallidas
+assertions      9 ejecutadas / 0 fallidas
+duración total  454 ms
+average         51 ms
+min              4 ms
+max            219 ms
 ```
 
-Endorsement y Routing utilizan `expose` en Docker Compose y no `ports`, por lo que desde el host el acceso funcional queda centralizado en APISIX.
+Los tiempos corresponden únicamente al entorno local utilizado para el reto y no representan una prueba de capacidad.
+
+## Casos validados
+
+| Caso | Resultado esperado | Resultado observado |
+| --- | ---: | ---: |
+| Health Endorsement por APISIX | `200` | `200` |
+| Health Routing por APISIX | `200` | `200` |
+| Operación protegida sin JWT | `401` | `401` |
+| Traducción de endoso con JWT válido | `200` | `200` |
+| Plantilla inexistente | `404` | `404` |
+| Cálculo de ruta óptima con JWT válido | `200` | `200` |
+| Ruta no alcanzable | `422` | `422` |
+
+Además de los códigos HTTP, la colección valida que el traductor respete la plantilla configurada y que Routing seleccione `Miraflores` con distancia `7` para el caso de prueba.
+
+## Seguridad demostrada
+
+La ejecución permite comprobar de forma directa que:
+
+| Control | Evidencia |
+| --- | --- |
+| JWT obligatorio | una operación funcional sin token responde `401` |
+| JWT válido | las operaciones autenticadas alcanzan los backends y responden según el caso funcional |
+| Gateway único | las pruebas funcionales utilizan `localhost:9080` |
+| Backends no expuestos | Endorsement y Routing utilizan `expose` y no publican `8080` ni `8081` al host |
+| Rate limiting | las rutas funcionales tienen `limit-count` configurado en APISIX con respuesta `429` al superar la política |
+
+Los endpoints de health permanecen sin autenticación para permitir probes operacionales.
 
 ## Pruebas unitarias incluidas
 
@@ -110,25 +127,39 @@ web
 docs
 ```
 
-Los dos backends permanecen accesibles internamente para el gateway y sus health checks, pero no se publican al host.
+Estado validado durante la ejecución local:
+
+```text
+apisix        running
+endorsement   running (healthy)
+routing       running (healthy)
+postgres      running (healthy)
+web           running
+docs          running (healthy)
+```
+
+Los dos backends permanecen accesibles dentro de la red Docker para APISIX, pero no se publican directamente al host.
 
 ## Quality gates
 
 Cada repositorio mantiene comandos locales reproducibles para lint, tests, coverage y build.
 
-No hay CI/CD automático habilitado en esta etapa. La intención es que cualquier automatización futura reutilice esos mismos comandos y no mantenga una lógica diferente a la validación local.
+No hay CI/CD automático habilitado en esta etapa. Cualquier automatización posterior debería reutilizar los mismos comandos de validación y no mantener una lógica diferente a la ejecución local.
 
-## Qué faltaría para una validación productiva
+## Qué falta validar en cloud
 
-Antes de considerar la solución preparada para producción agregaría:
+La evidencia local de funcionalidad y seguridad ya está cerrada. El siguiente punto del reto es demostrar el despliegue de los ejercicios 1 y 2 en GCP.
+
+Antes de considerar la solución preparada para producción también revisaría:
 
 - prueba de carga con volumetría acordada;
 - pruebas de degradación de base de datos;
 - pruebas distribuidas del rate limit;
-- validación con IdP productivo y rotación de claves;
-- validación de TLS y conectividad privada gateway -> Cloud Run;
-- validación de migraciones sobre Cloud SQL;
-- revisión de vulnerabilidades de imágenes y dependencias;
-- validación de límites de concurrencia y escalado de Cloud Run.
+- integración con un IdP productivo y rotación de claves;
+- TLS, DNS e IAM del gateway;
+- conectividad privada hacia Cloud Run;
+- migraciones sobre Cloud SQL;
+- vulnerabilidades de imágenes y dependencias;
+- límites de concurrencia y escalado de Cloud Run.
 
-Esta sección separa evidencia ya ejecutada, controles implementados y validaciones que pertenecen al despliegue productivo.
+Esta sección separa la evidencia ya ejecutada de los controles que todavía pertenecen al despliegue cloud y a una preparación productiva.
