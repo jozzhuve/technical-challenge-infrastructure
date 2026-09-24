@@ -192,16 +192,16 @@ module "apisix" {
     module.web
   ]
 
-  project_id          = var.project_id
-  region              = var.region
-  zone                = var.zone
-  network_name        = google_compute_network.challenge.name
+  project_id           = var.project_id
+  region               = var.region
+  zone                 = var.zone
+  network_name         = google_compute_network.challenge.name
   subnetwork_self_link = google_compute_subnetwork.challenge.self_link
-  machine_type        = var.apisix_machine_type
-  allowed_cidrs       = var.apisix_allowed_cidrs
-  image               = var.apisix_image
-  jwt_secret_id       = google_secret_manager_secret.apisix_jwt.secret_id
-  endorsement_host    = trimprefix(module.endorsement.url, "https://")
-  routing_host        = trimprefix(module.routing.url, "https://")
-  web_host            = trimprefix(module.web.url, "https://")
+  machine_type         = var.apisix_machine_type
+  allowed_cidrs        = var.apisix_allowed_cidrs
+  image                = var.apisix_image
+  jwt_secret_id        = google_secret_manager_secret.apisix_jwt.secret_id
+  endorsement_host     = trimprefix(module.endorsement.url, "https://")
+  routing_host         = trimprefix(module.routing.url, "https://")
+  web_host             = trimprefix(module.web.url, "https://")
 }
