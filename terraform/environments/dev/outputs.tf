@@ -2,6 +2,14 @@ output "artifact_registry" {
   value = google_artifact_registry_repository.containers.name
 }
 
+output "gateway_url" {
+  value = module.apisix.url
+}
+
+output "apisix_external_ip" {
+  value = module.apisix.external_ip
+}
+
 output "endorsement_url" {
   value = module.endorsement.url
 }

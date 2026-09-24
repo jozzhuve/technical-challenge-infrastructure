@@ -18,6 +18,20 @@ variable "port" {
   type = number
 }
 
+variable "ingress" {
+  type    = string
+  default = "INGRESS_TRAFFIC_ALL"
+
+  validation {
+    condition = contains([
+      "INGRESS_TRAFFIC_ALL",
+      "INGRESS_TRAFFIC_INTERNAL_ONLY",
+      "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+    ], var.ingress)
+    error_message = "El valor de ingress no es válido para Cloud Run v2."
+  }
+}
+
 variable "environment" {
   type    = map(string)
   default = {}

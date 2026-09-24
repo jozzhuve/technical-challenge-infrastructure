@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+apt-get update
+apt-get install -y docker.io curl python3 ca-certificates
+systemctl enable --now docker
+
+mkdir -p /opt/apisix
+
+cat > /opt/apisix/config.yaml <<'EOF'
+apisix:
+  node_listen:
+    - port: 9080
+
+deployment:
+  role: data_plane
+  role_data_plane:
+    config_provider: yaml
+EOF
+
+cat > /opt/apisix/apisix.yaml <<'EOF'
+routes:
+  - id: endorsement-health
+    uri: /health/endorsement
+    methods:
+      - GET
+    plugins:
+      proxy-rewrite:
+        uri: /health
+    upstream:
+      type: roundrobin
+      scheme: https
+      pass_host: node
+      nodes:
+        "${endorsement_host}:443": 1
+
+  - id: routing-health
+    uri: /health/routing
+    methods:
+      - GET
+    plugins:
+      proxy-rewrite:
+        uri: /health
+    upstream:
+      type: roundrobin
+      scheme: https
+      pass_host: node
+      nodes:
+        "${routing_host}:443": 1
+
+  - id: endorsement-translate-versioned
+    uri: /api/v1/endorsements/translate
+    methods:
+      - POST
+    plugins:
+      jwt-auth:
+        hide_credentials: true
+        claims_to_verify:
+          - exp
+          - nbf
+      limit-count:
+        count: 60
+        time_window: 60
+        rejected_code: 429
+        key_type: var
+        key: remote_addr
+        policy: local
+    upstream:
+      type: roundrobin
+      scheme: https
+      pass_host: node
+      nodes:
+        "${endorsement_host}:443": 1
+
+  - id: endorsement-translate-challenge
+    uri: /endorse/translate
+    methods:
+      - POST
+    plugins:
+      jwt-auth:
+        hide_credentials: true
+        claims_to_verify:
+          - exp
+          - nbf
+      limit-count:
+        count: 60
+        time_window: 60
+        rejected_code: 429
+        key_type: var
+        key: remote_addr
+        policy: local
+    upstream:
+      type: roundrobin
+      scheme: https
+      pass_host: node
+      nodes:
+        "${endorsement_host}:443": 1
+
+  - id: routing-optimal-versioned
+    uri: /api/v1/routes/optimal
+    methods:
+      - POST
+    plugins:
+      jwt-auth:
+        hide_credentials: true
+        claims_to_verify:
+          - exp
+          - nbf
+      limit-count:
+        count: 60
+        time_window: 60
+        rejected_code: 429
+        key_type: var
+        key: remote_addr
+        policy: local
+    upstream:
+      type: roundrobin
+      scheme: https
+      pass_host: node
+      nodes:
+        "${routing_host}:443": 1
+
+  - id: routing-optimal-alias
+    uri: /routes/optimal
+    methods:
+      - POST
+    plugins:
+      jwt-auth:
+        hide_credentials: true
+        claims_to_verify:
+          - exp
+          - nbf
+      limit-count:
+        count: 60
+        time_window: 60
+        rejected_code: 429
+        key_type: var
+        key: remote_addr
+        policy: local
+    upstream:
+      type: roundrobin
+      scheme: https
+      pass_host: node
+      nodes:
+        "${routing_host}:443": 1
+
+  - id: web
+    uri: /*
+    priority: -10
+    upstream:
+      type: roundrobin
+      scheme: https
+      pass_host: node
+      nodes:
+        "${web_host}:443": 1
+
+consumers:
+  - username: challenge-web
+    plugins:
+      jwt-auth:
+        key: challenge-web
+        secret: "$env://APISIX_JWT_SECRET"
+        algorithm: HS256
+
+#END
+EOF
+
+PROJECT_ID="${project_id}"
+JWT_SECRET_ID="${jwt_secret_id}"
+TOKEN_ENDPOINT="http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token"
+
+TOKEN_JSON="$(curl --fail --silent --show-error -H 'Metadata-Flavor: Google' "$TOKEN_ENDPOINT")"
+ACCESS_TOKEN="$(printf '%s' "$TOKEN_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')"
+SECRET_URL="https://secretmanager.googleapis.com/v1/projects/$PROJECT_ID/secrets/$JWT_SECRET_ID/versions/latest:access"
+SECRET_JSON="$(curl --fail --silent --show-error -H "Authorization: Bearer $ACCESS_TOKEN" "$SECRET_URL")"
+JWT_SECRET="$(printf '%s' "$SECRET_JSON" | python3 -c 'import base64,json,sys; print(base64.b64decode(json.load(sys.stdin)["payload"]["data"]).decode())')"
+
+docker pull "${apisix_image}"
+docker rm -f apisix >/dev/null 2>&1 || true
+
+docker run -d \
+  --name apisix \
+  --restart unless-stopped \
+  -p 9080:9080 \
+  -e APISIX_JWT_SECRET="$JWT_SECRET" \
+  -v /opt/apisix/config.yaml:/usr/local/apisix/conf/config.yaml:ro \
+  -v /opt/apisix/apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro \
+  "${apisix_image}"

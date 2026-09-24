@@ -18,7 +18,7 @@ resource "google_cloud_run_v2_service" "this" {
   project  = var.project_id
   name     = var.name
   location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  ingress  = var.ingress
 
   template {
     service_account = google_service_account.runtime.email
