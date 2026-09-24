@@ -70,5 +70,16 @@ services:
       routing:
         condition: service_healthy
 
+  docs:
+    build:
+      context: ./docs-site
+    ports:
+      - "3001:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost/ >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   endorsement_postgres_data:
