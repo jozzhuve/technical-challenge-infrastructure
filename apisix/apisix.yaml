@@ -28,7 +28,11 @@ routes:
     methods:
       - POST
     plugins:
-      jwt-auth: {}
+      jwt-auth:
+        hide_credentials: true
+        claims_to_verify:
+          - exp
+          - nbf
       limit-count:
         count: 60
         time_window: 60
@@ -46,7 +50,11 @@ routes:
     methods:
       - POST
     plugins:
-      jwt-auth: {}
+      jwt-auth:
+        hide_credentials: true
+        claims_to_verify:
+          - exp
+          - nbf
       limit-count:
         count: 60
         time_window: 60
@@ -64,7 +72,11 @@ routes:
     methods:
       - POST
     plugins:
-      jwt-auth: {}
+      jwt-auth:
+        hide_credentials: true
+        claims_to_verify:
+          - exp
+          - nbf
       limit-count:
         count: 60
         time_window: 60
@@ -82,7 +94,11 @@ routes:
     methods:
       - POST
     plugins:
-      jwt-auth: {}
+      jwt-auth:
+        hide_credentials: true
+        claims_to_verify:
+          - exp
+          - nbf
       limit-count:
         count: 60
         time_window: 60
