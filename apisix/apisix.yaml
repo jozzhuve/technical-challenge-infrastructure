@@ -1,0 +1,106 @@
+routes:
+  - id: endorsement-health
+    uri: /health/endorsement
+    methods:
+      - GET
+    plugins:
+      proxy-rewrite:
+        uri: /health
+    upstream:
+      type: roundrobin
+      nodes:
+        "endorsement:8080": 1
+
+  - id: routing-health
+    uri: /health/routing
+    methods:
+      - GET
+    plugins:
+      proxy-rewrite:
+        uri: /health
+    upstream:
+      type: roundrobin
+      nodes:
+        "routing:8081": 1
+
+  - id: endorsement-translate-versioned
+    uri: /api/v1/endorsements/translate
+    methods:
+      - POST
+    plugins:
+      jwt-auth: {}
+      limit-count:
+        count: 60
+        time_window: 60
+        rejected_code: 429
+        key_type: var
+        key: remote_addr
+        policy: local
+    upstream:
+      type: roundrobin
+      nodes:
+        "endorsement:8080": 1
+
+  - id: endorsement-translate-challenge
+    uri: /endorse/translate
+    methods:
+      - POST
+    plugins:
+      jwt-auth: {}
+      limit-count:
+        count: 60
+        time_window: 60
+        rejected_code: 429
+        key_type: var
+        key: remote_addr
+        policy: local
+    upstream:
+      type: roundrobin
+      nodes:
+        "endorsement:8080": 1
+
+  - id: routing-optimal-versioned
+    uri: /api/v1/routes/optimal
+    methods:
+      - POST
+    plugins:
+      jwt-auth: {}
+      limit-count:
+        count: 60
+        time_window: 60
+        rejected_code: 429
+        key_type: var
+        key: remote_addr
+        policy: local
+    upstream:
+      type: roundrobin
+      nodes:
+        "routing:8081": 1
+
+  - id: routing-optimal-alias
+    uri: /routes/optimal
+    methods:
+      - POST
+    plugins:
+      jwt-auth: {}
+      limit-count:
+        count: 60
+        time_window: 60
+        rejected_code: 429
+        key_type: var
+        key: remote_addr
+        policy: local
+    upstream:
+      type: roundrobin
+      nodes:
+        "routing:8081": 1
+
+consumers:
+  - username: challenge-web
+    plugins:
+      jwt-auth:
+        key: challenge-web
+        secret: "$env://APISIX_JWT_SECRET"
+        algorithm: HS256
+
+#END

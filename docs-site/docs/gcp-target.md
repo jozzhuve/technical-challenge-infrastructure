@@ -4,7 +4,7 @@ title: Arquitectura objetivo en GCP
 
 # Arquitectura objetivo en GCP
 
-La infraestructura está modelada con Terraform para GCP. La intención fue dejar una base pequeña, reproducible y coherente con el alcance del reto, sin entrar todavía en componentes que no están cerrados funcionalmente.
+La infraestructura está modelada con Terraform para GCP. La intención fue dejar una base pequeña, reproducible y coherente con el alcance del reto, sin asumir como cerradas decisiones que todavía requieren validación operativa.
 
 ## Componentes considerados
 
@@ -16,6 +16,7 @@ Cloud Run - Routing
 Cloud SQL - PostgreSQL 16
 Secret Manager
 Service Accounts / IAM
+Apache APISIX como gateway
 ```
 
 ## Artifact Registry
@@ -26,9 +27,9 @@ La idea es que cada aplicación genere su propia imagen y Terraform reciba la re
 
 ## Cloud Run
 
-Elegí Cloud Run porque los servicios son stateless a nivel de aplicación y no existe, para este reto, una necesidad que justifique administrar Kubernetes.
+Elegí Cloud Run para los servicios aplicativos porque son stateless a nivel de aplicación y no existe, para este reto, una necesidad que justifique administrar Kubernetes.
 
-Los servicios definidos son:
+Los servicios actualmente definidos son:
 
 - `technical-challenge-web`;
 - `endorsement-service`;
@@ -60,9 +61,7 @@ Hay un punto operativo importante: el valor generado sigue formando parte del st
 
 ## Punto de entrada de APIs
 
-Antes de desplegar considero necesario cerrar el ingreso a los servicios.
-
-La intención es usar un API Gateway con validación JWT y mantener Endorsement y Routing sin acceso público directo.
+La decisión de gateway ya se cerró para el diseño: utilizar Apache APISIX para centralizar autenticación JWT, rate limiting y routing.
 
 ```text
 Internet
@@ -71,16 +70,24 @@ Internet
 Web / Cliente
    |
    v
-API Gateway
+Apache APISIX
    |
-   +----> Endorsement Cloud Run
+   +----> Endorsement privado
    |
-   +----> Routing Cloud Run
+   +----> Routing privado
 ```
 
-Esto también resuelve un punto que deliberadamente no doy por cerrado: el proxy Nginx utilizado en Docker Compose referencia nombres internos como `endorsement` y `routing`. Esos nombres pertenecen a la red de Docker y no deben trasladarse tal cual a Cloud Run.
+Lo que todavía no doy por cerrado es el runtime productivo de APISIX en GCP. En local corre en modo standalone porque es suficiente para el reto, pero antes de provisionar cloud hay que definir una topología que resuelva correctamente alta disponibilidad, IAM, conectividad privada, TLS, DNS, observabilidad y gestión de configuración.
 
-El frontend desplegado debe consumir la URL del gateway o una capa equivalente de entrada autenticada.
+No considero correcto afirmar que basta con trasladar el contenedor de APISIX de Docker Compose a Cloud Run sin revisar esas condiciones.
+
+## Identidad
+
+El JWT local utiliza un consumidor y un secreto HS256 únicamente para demostrar el control de acceso.
+
+En producción el token debería ser emitido por un IdP confiable. APISIX validaría esos tokens utilizando la configuración correspondiente al proveedor de identidad definido por la organización.
+
+El secreto local no debe reutilizarse en cloud.
 
 ## Inicialización del esquema
 
@@ -92,21 +99,26 @@ No dejaría el esquema productivo dependiendo de `synchronize=true` de TypeORM.
 
 ## Qué está listo y qué no
 
-### Listo en código Terraform
+### Listo
 
 - APIs base de GCP requeridas;
 - Artifact Registry;
 - Cloud SQL;
 - base y usuario;
 - Secret Manager;
-- Cloud Run para los tres componentes;
+- Cloud Run para los tres componentes aplicativos;
 - service accounts;
-- permiso Cloud SQL Client para Endorsement.
+- permiso Cloud SQL Client para Endorsement;
+- patrón de gateway implementado localmente con APISIX;
+- JWT y rate limiting demostrables localmente.
 
 ### Antes de `terraform apply`
 
-- cerrar API Gateway/JWT;
-- definir URL de APIs consumida por el frontend;
+- definir runtime y alta disponibilidad de APISIX en GCP;
+- definir IAM y conectividad privada gateway -> Cloud Run;
+- definir IdP definitivo y validación de tokens;
+- definir TLS y DNS;
+- definir URL pública consumida por el frontend;
 - definir estrategia de migración de base de datos;
 - revisar networking de Cloud SQL según requerimientos de seguridad;
 - definir backend remoto del state;

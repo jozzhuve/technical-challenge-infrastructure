@@ -38,27 +38,47 @@ No elegí Go porque Node no pudiera resolverlo; lo utilicé como parte del lími
 
 ## 5. Cloud Run y no Kubernetes
 
-**Decisión:** plantear el despliegue sobre Cloud Run.
+**Decisión:** plantear los servicios aplicativos sobre Cloud Run.
 
-**Motivo:** los servicios son pequeños y stateless. Administrar un clúster no aporta valor para este alcance.
+**Motivo:** Endorsement y Routing son pequeños y stateless. Administrar un clúster no aporta valor para este alcance.
 
-**Trade-off:** si aparecieran necesidades avanzadas de networking, sidecars, workloads persistentes o controles específicos de scheduling, revisaría la decisión.
+**Trade-off:** la incorporación de un gateway autogestionado obliga a revisar con más detalle dónde ejecutarlo y cómo resolver networking, IAM y alta disponibilidad en GCP. Esa decisión se mantiene abierta hasta cerrar el diseño productivo.
 
 ## 6. Secret Manager
 
 **Decisión:** separar secretos de código e imágenes.
 
-**Motivo:** la contraseña de base de datos debe ser referenciada por el runtime y no quedar hardcodeada en el repositorio.
+**Motivo:** credenciales y claves de firma no deben quedar hardcodeadas en el repositorio.
 
-## 7. APIs privadas detrás de un punto de entrada
+En local, el secreto JWT se genera en `.env` y queda fuera de Git. Para cloud, los secretos deben administrarse con Secret Manager.
 
-**Decisión:** Endorsement y Routing quedan no anónimos en Terraform.
+## 7. Apache APISIX como punto único de entrada
 
-**Motivo:** no quiero que los backends sean públicos de manera directa.
+**Decisión:** incorporar APISIX delante de Endorsement y Routing.
 
-**Pendiente:** cerrar API Gateway/JWT y el flujo de autenticación antes de aplicar Terraform.
+**Motivo:** autenticación, rate limiting y routing son preocupaciones transversales. No quería implementar JWT de una manera en Hapi y de otra distinta en Go.
 
-## 8. Asincronía para préstamos
+**Implementación local:** APISIX corre en modo standalone declarativo, sin etcd, Dashboard ni Admin API. Las rutas funcionales usan `jwt-auth` y `limit-count`. Los backends ya no publican puertos al host.
+
+**Trade-off:** un gateway autogestionado ofrece portabilidad y flexibilidad, pero transfiere al equipo responsabilidades de operación que un API Gateway PaaS asumiría. En producción evaluaría esa carga antes de cerrar la topología definitiva.
+
+## 8. JWT de demostración solo para local
+
+**Decisión:** utilizar HS256 y un consumidor de prueba para demostrar el control de acceso local.
+
+**Motivo:** permite comprobar realmente `401`/`200` sin introducir un proveedor de identidad adicional que no forma parte del problema principal del reto.
+
+**Límite:** no considero este script como el emisor de identidad productivo. En producción el token debe provenir de un IdP confiable y el gateway validar la identidad según el estándar acordado.
+
+## 9. Rate limiting en el gateway
+
+**Decisión:** aplicar `limit-count` en APISIX y no dentro de cada backend.
+
+**Motivo:** evita duplicar una política HTTP transversal.
+
+La política local usa contador por instancia. Si APISIX escala horizontalmente, el límite debe respaldarse en almacenamiento compartido para conservar semántica global.
+
+## 10. Asincronía para préstamos
 
 **Decisión:** desacoplar la aceptación de la solicitud del procesamiento contra INARI.
 
@@ -66,27 +86,27 @@ No elegí Go porque Node no pudiera resolverlo; lo utilicé como parte del lími
 
 La operación debe poder continuar y consultarse sin mantener el request esperando.
 
-## 9. Idempotencia persistida
+## 11. Idempotencia persistida
 
 **Decisión:** utilizar `Idempotency-Key` más restricción única en persistencia.
 
 **Motivo:** un chequeo en memoria no protege frente a concurrencia ni múltiples instancias.
 
-## 10. Outbox transaccional
+## 12. Outbox transaccional
 
 **Decisión:** guardar operación y evento de publicación en la misma transacción.
 
 **Motivo:** evitar inconsistencias entre persistencia y mensajería.
 
-## 11. Docker Compose como evidencia local
+## 13. Docker Compose como evidencia local
 
-**Decisión:** integrar servicios, base, frontend y documentación en un solo compose.
+**Decisión:** integrar gateway, servicios, base, frontend y documentación en un solo compose.
 
 **Motivo:** facilitar la revisión del reto y demostrar que los componentes realmente funcionan en conjunto.
 
 No considero Docker Compose como la arquitectura productiva; es el mecanismo de ejecución local.
 
-## 12. No activar CI/CD automático en esta etapa
+## 14. No activar CI/CD automático en esta etapa
 
 **Decisión:** mantener los quality gates como comandos locales reproducibles.
 

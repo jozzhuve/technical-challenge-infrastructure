@@ -29,8 +29,8 @@ services:
       DATABASE_NAME: endorsement
       DATABASE_USER: endorsement
       DATABASE_PASSWORD: endorsement
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,13 +51,28 @@ services:
       context: ../technical-challenge-routing
     environment:
       PORT: 8081
-    ports:
-      - "8081:8081"
+    expose:
+      - "8081"
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O - http://localhost:8081/health >/dev/null 2>&1 || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 10
+
+  apisix:
+    image: apache/apisix:3.18.0-debian
+    environment:
+      APISIX_JWT_SECRET: ${APISIX_JWT_SECRET:?Ejecuta ./scripts/bootstrap-security.sh antes de levantar Docker Compose}
+    volumes:
+      - ./apisix/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+      - ./apisix/apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
+    ports:
+      - "9080:9080"
+    depends_on:
+      endorsement:
+        condition: service_healthy
+      routing:
+        condition: service_healthy
 
   web:
     build:
@@ -65,10 +80,7 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      endorsement:
-        condition: service_healthy
-      routing:
-        condition: service_healthy
+      - apisix
 
   docs:
     build:
