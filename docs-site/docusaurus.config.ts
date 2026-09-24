@@ -1,8 +1,8 @@
 import type { Config } from '@docusaurus/types';
 
 const config: Config = {
-  title: 'Technical Challenge',
-  tagline: 'Decisiones de arquitectura, ejecución y calidad',
+  title: 'Reto Técnico - Arquitectura de Solución',
+  tagline: 'Diseño, decisiones técnicas y evidencia de ejecución',
   url: 'https://example.com',
   baseUrl: '/',
   onBrokenLinks: 'throw',
@@ -24,8 +24,12 @@ const config: Config = {
   ],
   themeConfig: {
     navbar: {
-      title: 'Technical Challenge',
+      title: 'Arquitectura de Solución',
       items: [{ to: '/', label: 'Documentación', position: 'left' }],
+    },
+    footer: {
+      style: 'dark',
+      copyright: `Reto técnico - ${new Date().getFullYear()}`,
     },
   },
 };
