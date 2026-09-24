@@ -31,9 +31,10 @@ docker compose -f technical-challenge-infrastructure/docker-compose.yml up --bui
 Servicios disponibles:
 
 - Frontend: `http://localhost:3000`
+- Docusaurus: `http://localhost:3001`
 - Endorsement API: `http://localhost:8080`
 - Routing API: `http://localhost:8081`
-- PostgreSQL: `localhost:5432`
+- PostgreSQL: `localhost:5433`
 
 Para detener todo:
 
@@ -62,10 +63,20 @@ No se ejecuta `terraform apply` hasta revisar el plan y cerrar API Gateway/JWT.
 
 ## Docusaurus
 
+Docusaurus se construye y publica como sitio estático dentro del mismo Docker Compose mediante Nginx.
+
+Con toda la solución levantada está disponible en:
+
+```text
+http://localhost:3001
+```
+
+También puede ejecutarse de forma independiente para edición local:
+
 ```bash
 cd docs-site
 npm install
-npm run start
+npm run start -- --port 3001
 ```
 
 La documentación contiene la visión general, arquitectura y propuesta TO-BE del ejercicio de préstamos.
