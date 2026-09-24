@@ -51,7 +51,7 @@ La operación y el evento del outbox se guardan en la misma base de datos y dent
 
 El siguiente diagrama representa la arquitectura TO-BE utilizada para el ejercicio 3 y mantiene la numeración descrita en el flujo funcional.
 
-![Arquitectura TO-BE del proceso de préstamos](/img/architecture/prestamos-tobe.svg)
+![Arquitectura TO-BE del proceso de préstamos](/architecture/arq-propuesta-tobe.drawio.png)
 
 [Descargar archivo editable en Draw.io](/architecture/arq-propuesta-tobe.drawio)
 
