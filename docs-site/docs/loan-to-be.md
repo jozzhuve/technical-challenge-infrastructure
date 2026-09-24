@@ -47,6 +47,14 @@ Los componentes principales son:
 
 La operación y el evento del outbox se guardan en la misma base de datos y dentro de la misma transacción. El publicador del outbox toma posteriormente los eventos pendientes y los envía a Pub/Sub.
 
+## Diagrama de arquitectura
+
+El siguiente diagrama representa la arquitectura TO-BE utilizada para el ejercicio 3 y mantiene la numeración descrita en el flujo funcional.
+
+![Arquitectura TO-BE del proceso de préstamos](/img/architecture/prestamos-tobe.svg)
+
+[Descargar archivo editable en Draw.io](/architecture/arq-propuesta-tobe.drawio)
+
 ## Flujo de la solución
 
 Los números corresponden al diagrama de arquitectura.
